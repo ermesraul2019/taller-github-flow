@@ -2,8 +2,9 @@
 
 Repositorio del taller práctico de la asignatura **Electiva**.
 
-**Estudiante:** Ermes Raúl Barragán Elles
+**Estudiantes:** Ermes Raúl Barragán Elles · Yeizer
 **Docente:** Ing. Ricardo Vanegas Alarcón
+**Modalidad:** Trabajo en parejas
 
 ---
 
