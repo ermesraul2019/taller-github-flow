@@ -4,7 +4,6 @@ Repositorio del taller práctico de la asignatura **Electiva**.
 
 **Estudiante:** Ermes Raúl Barragán Elles
 **Docente:** Ing. Ricardo Vanegas Alarcón
-**Universidad Tecnológica de Bolívar**
 
 ---
 
