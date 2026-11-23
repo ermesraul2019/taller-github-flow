@@ -1,0 +1,77 @@
+import unittest
+from pagos import procesar_pago_usuario
+
+
+class TestProcesarPagoUsuario(unittest.TestCase):
+
+    def test_usuario_nulo_retorna_false(self):
+        tarjeta = {"saldo": 500.0}
+        resultado = procesar_pago_usuario(None, tarjeta, 100, "CO", False)
+        self.assertFalse(resultado)
+        self.assertEqual(tarjeta["saldo"], 500.0)
+
+    def test_usuario_inactivo_retorna_false(self):
+        usuario = {"activo": False}
+        tarjeta = {"saldo": 500.0}
+        resultado = procesar_pago_usuario(usuario, tarjeta, 100, "CO", False)
+        self.assertFalse(resultado)
+        self.assertEqual(tarjeta["saldo"], 500.0)
+
+    def test_saldo_insuficiente_retorna_false(self):
+        usuario = {"activo": True}
+        tarjeta = {"saldo": 50.0}
+        resultado = procesar_pago_usuario(usuario, tarjeta, 100, "CO", False)
+        self.assertFalse(resultado)
+        self.assertEqual(tarjeta["saldo"], 50.0)
+
+    def test_pago_normal_en_co_aplica_19_impuesto(self):
+        usuario = {"activo": True}
+        tarjeta = {"saldo": 500.0}
+        # 100 + 19% = 119.0 -> saldo restante: 381.0
+        resultado = procesar_pago_usuario(usuario, tarjeta, 100, "CO", False)
+        self.assertTrue(resultado)
+        self.assertEqual(tarjeta["saldo"], 381.0)
+
+    def test_pago_normal_en_mx_aplica_16_impuesto(self):
+        usuario = {"activo": True}
+        tarjeta = {"saldo": 500.0}
+        # 100 + 16% = 116.0 -> saldo restante: 384.0
+        resultado = procesar_pago_usuario(usuario, tarjeta, 100, "MX", False)
+        self.assertTrue(resultado)
+        self.assertEqual(tarjeta["saldo"], 384.0)
+
+    def test_pago_normal_en_cl_aplica_19_impuesto(self):
+        usuario = {"activo": True}
+        tarjeta = {"saldo": 500.0}
+        # 100 + 19% = 119.0 -> saldo restante: 381.0
+        resultado = procesar_pago_usuario(usuario, tarjeta, 100, "CL", False)
+        self.assertTrue(resultado)
+        self.assertEqual(tarjeta["saldo"], 381.0)
+
+    def test_vip_monto_menor_o_igual_1000_descuento_10_y_impuesto_co(self):
+        usuario = {"activo": True}
+        tarjeta = {"saldo": 1000.0}
+        # 500 * 0.90 = 450; 450 * 1.19 = 535.5 -> saldo restante: 464.5
+        resultado = procesar_pago_usuario(usuario, tarjeta, 500, "CO", True)
+        self.assertTrue(resultado)
+        self.assertEqual(tarjeta["saldo"], 464.5)
+
+    def test_vip_monto_mayor_1000_descuento_20_y_impuesto_mx(self):
+        usuario = {"activo": True}
+        tarjeta = {"saldo": 3000.0}
+        # 2000 * 0.80 = 1600; 1600 * 1.16 = 1856.0 -> saldo restante: 1144.0
+        resultado = procesar_pago_usuario(usuario, tarjeta, 2000, "MX", True)
+        self.assertTrue(resultado)
+        self.assertEqual(tarjeta["saldo"], 1144.0)
+
+    def test_pais_sin_impuesto_definido_no_suma_iva(self):
+        usuario = {"activo": True}
+        tarjeta = {"saldo": 500.0}
+        # Sin CO, MX ni CL -> monto_final = 200 -> saldo restante: 300.0
+        resultado = procesar_pago_usuario(usuario, tarjeta, 200, "US", False)
+        self.assertTrue(resultado)
+        self.assertEqual(tarjeta["saldo"], 300.0)
+
+
+if __name__ == "__main__":
+    unittest.main()
