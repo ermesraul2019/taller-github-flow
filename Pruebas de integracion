@@ -1,0 +1,60 @@
+import unittest
+from pagos import ejecutar_pago_en_bd
+from repositorio_pagos import RepositorioPagos
+
+
+class TestIntegracionPagos(unittest.TestCase):
+
+    def setUp(self):
+        # Base de datos limpia en memoria para cada prueba
+        self.repo = RepositorioPagos(":memory:")
+
+    def tearDown(self):
+        self.repo.cerrar()
+
+    def test_flujo_completo_pago_vip_en_colombia_persiste_en_bd(self):
+        usuario_id = self.repo.crear_usuario("Ana", activo=True, es_vip=True)
+        tarjeta_id = self.repo.crear_tarjeta(usuario_id, saldo=1000.0)
+
+        # 500 * 0.90 (VIP <= 1000) = 450; 450 * 1.19 (CO) = 535.5 -> saldo: 464.5
+        resultado = ejecutar_pago_en_bd(self.repo, usuario_id, tarjeta_id, 500, "CO")
+
+        self.assertTrue(resultado)
+        tarjeta_actualizada = self.repo.obtener_tarjeta(tarjeta_id)
+        self.assertEqual(tarjeta_actualizada["saldo"], 464.5)
+
+        transacciones = self.repo.listar_transacciones_usuario(usuario_id)
+        self.assertEqual(len(transacciones), 1)
+        self.assertEqual(transacciones[0]["estado"], "APROBADA")
+        self.assertEqual(transacciones[0]["pais"], "CO")
+
+    def test_pago_rechazado_por_saldo_insuficiente_no_descuenta_y_registra_rechazo(self):
+        usuario_id = self.repo.crear_usuario("Carlos", activo=True, es_vip=False)
+        tarjeta_id = self.repo.crear_tarjeta(usuario_id, saldo=80.0)
+
+        resultado = ejecutar_pago_en_bd(self.repo, usuario_id, tarjeta_id, 200, "MX")
+
+        self.assertFalse(resultado)
+        tarjeta_actualizada = self.repo.obtener_tarjeta(tarjeta_id)
+        self.assertEqual(tarjeta_actualizada["saldo"], 80.0)
+
+        transacciones = self.repo.listar_transacciones_usuario(usuario_id)
+        self.assertEqual(len(transacciones), 1)
+        self.assertEqual(transacciones[0]["estado"], "RECHAZADA")
+
+    def test_usuario_inactivo_no_procesa_pago_en_bd(self):
+        usuario_id = self.repo.crear_usuario("Laura", activo=False, es_vip=True)
+        tarjeta_id = self.repo.crear_tarjeta(usuario_id, saldo=2000.0)
+
+        resultado = ejecutar_pago_en_bd(self.repo, usuario_id, tarjeta_id, 300, "CL")
+
+        self.assertFalse(resultado)
+        self.assertEqual(self.repo.obtener_tarjeta(tarjeta_id)["saldo"], 2000.0)
+        transacciones = self.repo.listar_transacciones_usuario(usuario_id)
+        self.assertEqual(len(transacciones), 1)
+        self.assertEqual(transacciones[0]["estado"], "RECHAZADA")
+
+
+if __name__ == "__main__":
+    unittest.main()
+
